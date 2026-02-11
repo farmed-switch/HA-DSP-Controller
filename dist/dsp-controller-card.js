@@ -15,9 +15,13 @@ class DspControllerCard extends HTMLElement {
       throw new Error('You must define entities as an array');
     }
 
+    // Calculate height - add extra space if volume slider is enabled
+    const baseHeight = config.height || 300;
+    const volumeHeight = config.volume_entity ? 80 : 0;  // Extra space for volume slider
+    
     this._config = {
       title: config.title || 'Equalizer',
-      height: config.height || 300,
+      height: baseHeight + volumeHeight,
       min: config.min || -12,
       max: config.max || 12,
       freq_min: config.freq_min || 20,        // Min frequency in Hz
@@ -658,7 +662,11 @@ class DspControllerCard extends HTMLElement {
   }
 
   getCardSize() {
-    return 3;
+    // Return card height in units of 50px
+    // Add 2 units if volume slider is present
+    const baseSize = 3;
+    const volumeSize = this._config?.volume_entity ? 2 : 0;
+    return baseSize + volumeSize;
   }
 
   static getConfigForm() {
@@ -705,7 +713,7 @@ window.customCards.push({
 });
 
 console.info(
-  '%c DSP-CONTROLLER-CARD %c v2.0.2 ',
+  '%c DSP-CONTROLLER-CARD %c v2.0.3 ',
   'color: white; background: #22ba00; font-weight: 700;',
   'color: #22ba00; background: white; font-weight: 700;'
 );

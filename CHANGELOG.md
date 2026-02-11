@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.3] - 2026-02-11
+
+### Fixed
+- **Canvas Height**: Automatically expands canvas height by 80px when volume slider is enabled
+- Volume slider now properly fits within canvas boundaries
+- Updated `getCardSize()` to reflect larger card size when volume control is active
+
+### Technical Details
+- Base height: 300px (or custom config.height)
+- With volume slider: +80px added automatically
+- This ensures the volume slider drawn at `h - pad + 50` is fully visible
+
 ## [2.0.2] - 2026-02-11
 
 ### Changed
