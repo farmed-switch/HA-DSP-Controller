@@ -32,19 +32,47 @@ class DspControllerCard extends HTMLElement {
   }
 
   set hass(hass) {
+    const oldHass = this._hass;
     this._hass = hass;
-    this._updateBands();
-    if (this._canvas) {
-      this._draw();
+    
+    // Only update if entities have actually changed
+    if (!oldHass || this._entitiesChanged(oldHass, hass)) {
+      this._updateBands();
+      if (this._canvas && this._bands.length > 0) {
+        requestAnimationFrame(() => this._draw());
+      }
     }
   }
 
   connectedCallback() {
-    // Ensure re-render when added to DOM
-    if (this._hass && this._canvas) {
-      this._updateBands();
-      this._draw();
+    // Ensure canvas is properly sized when added to DOM
+    if (this._canvas) {
+      requestAnimationFrame(() => {
+        this._resizeCanvas();
+        if (this._hass) {
+          this._updateBands();
+          this._draw();
+        }
+      });
     }
+  }
+
+  _entitiesChanged(oldHass, newHass) {
+    return this._entities.some(entityId => {
+      const oldState = oldHass.states[entityId];
+      const newState = newHass.states[entityId];
+      return !oldState || !newState || oldState.state !== newState.state;
+    });
+  }
+
+  _resizeCanvas() {
+    if (!this._canvas || !this._ctx) return;
+    const rect = this._canvas.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return;
+    
+    this._canvas.width = rect.width * window.devicePixelRatio;
+    this._canvas.height = rect.height * window.devicePixelRatio;
+    this._ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
   }
 
   _updateBands() {
@@ -69,7 +97,9 @@ class DspControllerCard extends HTMLElement {
       };
     }).filter(b => b !== null);
     
-    console.log(`DSP Controller Card: Found ${this._bands.length} bands`, this._bands);
+    if (this._bands.length > 0) {
+      console.log(`DSP Controller Card: Loaded ${this._bands.length} bands successfully`);
+    }
   }
 
   _getFrequencyLabel(name) {
@@ -144,11 +174,8 @@ class DspControllerCard extends HTMLElement {
     this._canvas = this.shadowRoot.getElementById('eqCanvas');
     this._ctx = this._canvas.getContext('2d');
     
-    // Set canvas resolution
-    const rect = this._canvas.getBoundingClientRect();
-    this._canvas.width = rect.width * window.devicePixelRatio;
-    this._canvas.height = rect.height * window.devicePixelRatio;
-    this._ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+    // Set canvas resolution using helper method
+    this._resizeCanvas();
 
     // Event listeners
     this._canvas.addEventListener('mousedown', this._onPointerDown.bind(this));
@@ -439,7 +466,7 @@ window.customCards.push({
 });
 
 console.info(
-  '%c DSP-CONTROLLER-CARD %c v1.0.1 ',
+  '%c DSP-CONTROLLER-CARD %c v1.0.2 ',
   'color: white; background: #22ba00; font-weight: 700;',
   'color: #22ba00; background: white; font-weight: 700;'
 );
