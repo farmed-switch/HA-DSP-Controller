@@ -1,0 +1,44 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Get version from tag
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: Release ${{ steps.get_version.outputs.VERSION }}
+          body: |
+            ## What's Changed
+            
+            See [CHANGELOG.md](https://github.com/farmed-switch/HA-DSP-Controller/blob/main/CHANGELOG.md) for details.
+            
+            ## Installation
+            
+            ### Via HACS (Recommended)
+            1. Open HACS → Frontend
+            2. Search for "DSP Controller Card"
+            3. Click Download
+            
+            ### Manual Installation
+            1. Download `dsp-controller-card.js` below
+            2. Copy to `/config/www/`
+            3. Add resource in Lovelace: `/local/dsp-controller-card.js`
+          files: |
+            dist/dsp-controller-card.js
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

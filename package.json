@@ -1,0 +1,29 @@
+{
+  "name": "dsp-controller-card",
+  "version": "1.0.0",
+  "description": "A modern graphical equalizer card with interactive curve control for Home Assistant",
+  "main": "dist/dsp-controller-card.js",
+  "scripts": {
+    "build": "echo 'No build step required - vanilla JS'",
+    "lint": "echo 'No linting configured yet'"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/farmed-switch/HA-DSP-Controller.git"
+  },
+  "keywords": [
+    "home-assistant",
+    "lovelace",
+    "custom-card",
+    "equalizer",
+    "dsp",
+    "audio",
+    "esphome"
+  ],
+  "author": "farmed-switch",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/farmed-switch/HA-DSP-Controller/issues"
+  },
+  "homepage": "https://github.com/farmed-switch/HA-DSP-Controller#readme"
+}
