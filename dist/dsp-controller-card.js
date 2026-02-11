@@ -503,253 +503,36 @@ class DspControllerCard extends HTMLElement {
     return 3;
   }
 
-  static getConfigElement() {
-    return document.createElement('dsp-controller-card-editor');
+  static getConfigForm() {
+    return {
+      schema: [
+        { name: 'title', selector: { text: {} } },
+        { name: 'height', selector: { number: { min: 100, max: 1000, mode: 'box' } } },
+        { name: 'show_reset', selector: { boolean: {} } },
+        { name: 'entities', selector: { entity: { multiple: true, filter: { domain: 'number' } } } },
+        { 
+          type: 'grid',
+          name: '',
+          schema: [
+            { name: 'min', selector: { number: { min: -24, max: 0, mode: 'box' } } },
+            { name: 'max', selector: { number: { min: 0, max: 24, mode: 'box' } } },
+          ]
+        }
+      ]
+    };
   }
 
   static getStubConfig() {
     return {
       title: 'DSP Equalizer',
       entities: [],
-      height: 300
+      height: 300,
+      min: -12,
+      max: 12,
+      show_reset: false,
     };
   }
 }
-
-// Editor for visual configuration in Lovelace UI
-class DspControllerCardEditor extends HTMLElement {
-  setConfig(config) {
-    this._config = { ...config };
-    if (!this._config.entities) {
-      this._config.entities = [];
-    }
-    this.render();
-  }
-
-  set hass(hass) {
-    this._hass = hass;
-  }
-
-  render() {
-    if (!this.shadowRoot) {
-      this.attachShadow({ mode: 'open' });
-    }
-
-    const style = `
-      <style>
-        .card-config {
-          padding: 16px;
-        }
-        .option {
-          margin-bottom: 16px;
-        }
-        .option label {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          margin-bottom: 4px;
-          font-weight: 500;
-        }
-        ha-entity-picker, paper-input {
-          width: 100%;
-        }
-        .entities-list {
-          border: 1px solid var(--divider-color);
-          border-radius: 4px;
-          padding: 8px;
-          margin-top: 8px;
-        }
-        .entity-row {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          margin-bottom: 8px;
-        }
-        .entity-row ha-entity-picker {
-          flex: 1;
-        }
-        mwc-button {
-          margin-top: 8px;
-        }
-        .remove-btn {
-          color: var(--error-color);
-          cursor: pointer;
-        }
-      </style>
-    `;
-
-    const html = `
-      ${style}
-      <div class="card-config">
-        <div class="option">
-          <label>Title</label>
-          <paper-input
-            id="title-input"
-            value="${this._config.title || 'DSP Equalizer'}"
-          ></paper-input>
-        </div>
-        
-        <div class="option">
-          <label>Height (pixels)</label>
-          <paper-input
-            id="height-input"
-            type="number"
-            value="${this._config.height || 300}"
-          ></paper-input>
-        </div>
-
-        <div class="option">
-          <label>
-            <ha-switch
-              id="show-reset-toggle"
-              ${this._config.show_reset ? 'checked' : ''}
-            ></ha-switch>
-            Show Reset Button
-          </label>
-        </div>
-
-        <div class="option">
-          <label>Entities (EQ Bands)</label>
-          <div class="entities-list">
-            ${this._config.entities.map((entity, index) => `
-              <div class="entity-row" data-index="${index}">
-                <ha-entity-picker
-                  allow-custom-entity
-                  .hass="${this._hass}"
-                  .value="${entity}"
-                  .configValue="${index}"
-                  domain-filter="number"
-                  @value-changed="${this._entityChanged}"
-                ></ha-entity-picker>
-                <ha-icon-button
-                  class="remove-btn"
-                  .index="${index}"
-                  @click="${this._removeEntity}"
-                >
-                  <ha-icon icon="mdi:delete"></ha-icon>
-                </ha-icon-button>
-              </div>
-            `).join('')}
-          </div>
-          <mwc-button @click="${this._addEntity}">
-            <ha-icon icon="mdi:plus"></ha-icon>
-            Add Entity
-          </mwc-button>
-        </div>
-
-        <div class="option">
-          <label>Min dB</label>
-          <paper-input
-            id="min-input"
-            type="number"
-            value="${this._config.min || -12}"
-          ></paper-input>
-        </div>
-
-        <div class="option">
-          <label>Max dB</label>
-          <paper-input
-            id="max-input"
-            type="number"
-            value="${this._config.max || 12}"
-          ></paper-input>
-        </div>
-      </div>
-    `;
-
-    this.shadowRoot.innerHTML = html;
-    this._attachEventListeners();
-  }
-
-  _attachEventListeners() {
-    // Title input
-    const titleInput = this.shadowRoot.getElementById('title-input');
-    if (titleInput) {
-      titleInput.addEventListener('value-changed', (ev) => {
-        this._config = { ...this._config, title: ev.detail.value };
-        this._configChanged();
-      });
-    }
-
-    // Height input
-    const heightInput = this.shadowRoot.getElementById('height-input');
-    if (heightInput) {
-      heightInput.addEventListener('value-changed', (ev) => {
-        this._config = { ...this._config, height: parseInt(ev.detail.value) };
-        this._configChanged();
-      });
-    }
-
-    // Min dB input
-    const minInput = this.shadowRoot.getElementById('min-input');
-    if (minInput) {
-      minInput.addEventListener('value-changed', (ev) => {
-        this._config = { ...this._config, min: parseFloat(ev.detail.value) };
-        this._configChanged();
-      });
-    }
-
-    // Max dB input
-    const maxInput = this.shadowRoot.getElementById('max-input');
-    if (maxInput) {
-      maxInput.addEventListener('value-changed', (ev) => {
-        this._config = { ...this._config, max: parseFloat(ev.detail.value) };
-        this._configChanged();
-      });
-    }
-
-    // Show reset toggle
-    const showResetToggle = this.shadowRoot.getElementById('show-reset-toggle');
-    if (showResetToggle) {
-      showResetToggle.addEventListener('change', (ev) => {
-        this._config = { ...this._config, show_reset: ev.target.checked };
-        this._configChanged();
-      });
-    }
-
-    this.shadowRoot.querySelectorAll('ha-entity-picker').forEach(picker => {
-      picker.addEventListener('value-changed', (ev) => {
-        const index = parseInt(ev.target.configValue);
-        const entities = [...this._config.entities];
-        entities[index] = ev.detail.value;
-        this._config = { ...this._config, entities };
-        this._configChanged();
-      });
-    });
-
-    const addBtn = this.shadowRoot.querySelector('mwc-button');
-    if (addBtn) {
-      addBtn.addEventListener('click', () => {
-        const entities = [...this._config.entities, ''];
-        this._config = { ...this._config, entities };
-        this._configChanged();
-        this.render();
-      });
-    }
-
-    this.shadowRoot.querySelectorAll('.remove-btn').forEach(btn => {
-      btn.addEventListener('click', (ev) => {
-        const index = parseInt(ev.currentTarget.index);
-        const entities = [...this._config.entities];
-        entities.splice(index, 1);
-        this._config = { ...this._config, entities };
-        this._configChanged();
-        this.render();
-      });
-    });
-  }
-
-  _configChanged() {
-    const event = new Event('config-changed', {
-      bubbles: true,
-      composed: true,
-    });
-    event.detail = { config: this._config };
-    this.dispatchEvent(event);
-  }
-}
-
-customElements.define('dsp-controller-card-editor', DspControllerCardEditor);
 
 customElements.define('dsp-controller-card', DspControllerCard);
 
@@ -763,7 +546,7 @@ window.customCards.push({
 });
 
 console.info(
-  '%c DSP-CONTROLLER-CARD %c v1.0.4 ',
+  '%c DSP-CONTROLLER-CARD %c v1.0.5 ',
   'color: white; background: #22ba00; font-weight: 700;',
   'color: #22ba00; background: white; font-weight: 700;'
 );

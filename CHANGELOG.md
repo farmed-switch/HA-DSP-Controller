@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.5] - 2026-02-11
+
+### Fixed
+- **Complete editor rewrite**: Replaced broken custom editor with Home Assistant's built-in form system
+- All input fields now work correctly (title, height, min/max dB)
+- Entity picker now displays and works properly with domain filter for number entities
+- Multi-select entity picker allows adding multiple EQ bands at once
+
+### Changed
+- Editor now uses `getConfigForm()` with official Home Assistant selectors
+- Removed 250+ lines of buggy custom editor code
+- Cleaner, more maintainable implementation
+
 ## [1.0.4] - 2026-02-11
 
 ### Fixed

@@ -66,9 +66,16 @@ Perfect for controlling:
 
 1. Add a new card to your Lovelace dashboard
 2. Search for "**DSP Controller Card**"
-3. Click **"Add Entity"** button to select your EQ band entities
-4. Configure title, height, min/max dB values
-5. Done! No YAML needed!
+3. In the built-in visual editor:
+   - **Title**: Enter your card title
+   - **Height**: Set canvas height (100-1000 pixels)
+   - **Show reset**: Toggle to show/hide the dangerous reset button
+   - **Entities**: Multi-select entity picker - choose all your number entities at once!
+   - **Min/Max dB**: Set your dB range (-24 to +24)
+4. Click **Save**
+5. Done! The editor uses Home Assistant's native form system with proper validation
+
+The card auto-detects frequency ranges from your entity names (e.g., "20hz", "16khz").
 
 ### Manual Way: YAML Configuration
 
