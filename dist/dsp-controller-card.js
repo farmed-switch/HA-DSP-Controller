@@ -25,7 +25,7 @@ class DspControllerCard extends HTMLElement {
       grid_color: config.grid_color || '#333333',
       point_color: config.point_color || '#ffffff',
       text_color: config.text_color || '#aaaaaa',
-      show_reset: config.show_reset !== false,
+      show_reset: config.show_reset === true,
       padding: config.padding || 40,           // Padding for curve inside grid
       ...config
     };
@@ -544,7 +544,9 @@ class DspControllerCardEditor extends HTMLElement {
           margin-bottom: 16px;
         }
         .option label {
-          display: block;
+          display: flex;
+          align-items: center;
+          gap: 8px;
           margin-bottom: 4px;
           font-weight: 500;
         }
@@ -582,20 +584,28 @@ class DspControllerCardEditor extends HTMLElement {
         <div class="option">
           <label>Title</label>
           <paper-input
+            id="title-input"
             value="${this._config.title || 'DSP Equalizer'}"
-            @value-changed="${this._valueChanged}"
-            .configValue="${'title'}"
           ></paper-input>
         </div>
         
         <div class="option">
           <label>Height (pixels)</label>
           <paper-input
+            id="height-input"
             type="number"
             value="${this._config.height || 300}"
-            @value-changed="${this._valueChanged}"
-            .configValue="${'height'}"
           ></paper-input>
+        </div>
+
+        <div class="option">
+          <label>
+            <ha-switch
+              id="show-reset-toggle"
+              ${this._config.show_reset ? 'checked' : ''}
+            ></ha-switch>
+            Show Reset Button
+          </label>
         </div>
 
         <div class="option">
@@ -630,20 +640,18 @@ class DspControllerCardEditor extends HTMLElement {
         <div class="option">
           <label>Min dB</label>
           <paper-input
+            id="min-input"
             type="number"
             value="${this._config.min || -12}"
-            @value-changed="${this._valueChanged}"
-            .configValue="${'min'}"
           ></paper-input>
         </div>
 
         <div class="option">
           <label>Max dB</label>
           <paper-input
+            id="max-input"
             type="number"
             value="${this._config.max || 12}"
-            @value-changed="${this._valueChanged}"
-            .configValue="${'max'}"
           ></paper-input>
         </div>
       </div>
@@ -654,22 +662,50 @@ class DspControllerCardEditor extends HTMLElement {
   }
 
   _attachEventListeners() {
-    this.shadowRoot.querySelectorAll('paper-input').forEach(input => {
-      input.addEventListener('value-changed', (ev) => {
-        const target = ev.target;
-        const configValue = target.configValue;
-        let value = ev.detail.value;
-        
-        if (target.type === 'number') {
-          value = parseFloat(value);
-        }
-        
-        if (this._config[configValue] !== value) {
-          this._config = { ...this._config, [configValue]: value };
-          this._configChanged();
-        }
+    // Title input
+    const titleInput = this.shadowRoot.getElementById('title-input');
+    if (titleInput) {
+      titleInput.addEventListener('value-changed', (ev) => {
+        this._config = { ...this._config, title: ev.detail.value };
+        this._configChanged();
       });
-    });
+    }
+
+    // Height input
+    const heightInput = this.shadowRoot.getElementById('height-input');
+    if (heightInput) {
+      heightInput.addEventListener('value-changed', (ev) => {
+        this._config = { ...this._config, height: parseInt(ev.detail.value) };
+        this._configChanged();
+      });
+    }
+
+    // Min dB input
+    const minInput = this.shadowRoot.getElementById('min-input');
+    if (minInput) {
+      minInput.addEventListener('value-changed', (ev) => {
+        this._config = { ...this._config, min: parseFloat(ev.detail.value) };
+        this._configChanged();
+      });
+    }
+
+    // Max dB input
+    const maxInput = this.shadowRoot.getElementById('max-input');
+    if (maxInput) {
+      maxInput.addEventListener('value-changed', (ev) => {
+        this._config = { ...this._config, max: parseFloat(ev.detail.value) };
+        this._configChanged();
+      });
+    }
+
+    // Show reset toggle
+    const showResetToggle = this.shadowRoot.getElementById('show-reset-toggle');
+    if (showResetToggle) {
+      showResetToggle.addEventListener('change', (ev) => {
+        this._config = { ...this._config, show_reset: ev.target.checked };
+        this._configChanged();
+      });
+    }
 
     this.shadowRoot.querySelectorAll('ha-entity-picker').forEach(picker => {
       picker.addEventListener('value-changed', (ev) => {
@@ -727,7 +763,7 @@ window.customCards.push({
 });
 
 console.info(
-  '%c DSP-CONTROLLER-CARD %c v1.0.3 ',
+  '%c DSP-CONTROLLER-CARD %c v1.0.4 ',
   'color: white; background: #22ba00; font-weight: 700;',
   'color: #22ba00; background: white; font-weight: 700;'
 );

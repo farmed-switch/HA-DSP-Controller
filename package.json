@@ -1,6 +1,6 @@
 {
   "name": "dsp-controller-card",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "A modern graphical equalizer card with interactive curve control for Home Assistant",
   "main": "dist/dsp-controller-card.js",
   "scripts": {

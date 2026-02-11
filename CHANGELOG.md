@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.4] - 2026-02-11
+
+### Fixed
+- Fixed input fields in visual editor not accepting text input
+- Fixed event handlers for all configuration inputs (title, height, min/max dB)
+
+### Changed
+- Reset button is now hidden by default (can be enabled via "Show Reset Button" toggle in editor)
+- Added visual toggle switch in editor to show/hide the reset button
+
+### Added
+- "Show Reset Button" toggle in configuration editor for safer default behavior
+
 ## [1.0.3] - 2026-02-11
 
 ### Added

@@ -103,7 +103,7 @@ title: My Custom EQ
 height: 350                      # Height in pixels (default: 300)
 min: -12                         # Minimum dB value (default: -12)
 max: 12                          # Maximum dB value (default: 12)
-show_reset: true                 # Show reset button (default: true)
+show_reset: true                 # Show reset button (default: false, enable if needed)
 curve_color: '#22ba00'           # Curve line color
 background_color: '#1c1c1c'      # Card background color
 grid_color: '#333333'            # Grid line color
@@ -129,7 +129,7 @@ entities:
 | `freq_min` | number | auto | Minimum frequency in Hz (auto-detected from entities if not set) |
 | `freq_max` | number | auto | Maximum frequency in Hz (auto-detected from entities if not set) |
 | `padding` | number | `40` | Padding inside grid borders |
-| `show_reset` | boolean | `true` | Show/hide the reset button |
+| `show_reset` | boolean | `false` | Show/hide the reset button (hidden by default for safety) |
 | `curve_color` | string | `"#22ba00"` | Color of the EQ curve |
 | `background_color` | string | `"#1c1c1c"` | Card background color |
 | `grid_color` | string | `"#333333"` | Grid lines color |
