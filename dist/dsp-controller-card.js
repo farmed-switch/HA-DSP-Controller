@@ -572,7 +572,7 @@ class DspControllerCard extends HTMLElement {
 
   _drawVolume(w, h) {
     const pad = this._config.padding;
-    const volumeY = pad - 15; // Position at top, above grid
+    const volumeY = 30; // Position at top with space for text (fixed position)
     const sliderStart = pad;
     const sliderEnd = w - pad;
     const sliderWidth = sliderEnd - sliderStart;
@@ -609,16 +609,16 @@ class DspControllerCard extends HTMLElement {
     
     // Draw value text at top
     this._ctx.fillStyle = this._config.text_color;
-    this._ctx.font = '10px sans-serif';
+    this._ctx.font = '11px sans-serif';
     this._ctx.textAlign = 'left';
     this._ctx.textBaseline = 'middle';
-    this._ctx.fillText(`${this._volume.name}: ${Math.round(this._volume.value)}`, sliderStart, volumeY - 12);
+    this._ctx.fillText(`${this._volume.name}: ${Math.round(this._volume.value)}`, sliderStart, 12);
   }
   
   _isVolumeSlider(x, y) {
     const rect = this._canvas.getBoundingClientRect();
+    const volumeY = 30;  // Match _drawVolume position
     const pad = this._config.padding;
-    const volumeY = pad - 15;  // Match _drawVolume position at top
     return y >= volumeY - 10 && y <= volumeY + 10 && x >= pad && x <= rect.width - pad;
   }
   
@@ -717,7 +717,7 @@ window.customCards.push({
 });
 
 console.info(
-  '%c DSP-CONTROLLER-CARD %c v2.1.1 ',
+  '%c DSP-CONTROLLER-CARD %c v2.1.2 ',
   'color: white; background: #22ba00; font-weight: 700;',
   'color: #22ba00; background: white; font-weight: 700;'
 );
