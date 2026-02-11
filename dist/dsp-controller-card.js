@@ -602,13 +602,6 @@ class DspControllerCard extends HTMLElement {
     this._ctx.arc(valueX, volumeY, 6, 0, Math.PI * 2);
     this._ctx.fill();
     this._ctx.shadowBlur = 0;
-    
-    // Draw value text
-    this._ctx.fillStyle = this._config.text_color;
-    this._ctx.font = '10px sans-serif';
-    this._ctx.textAlign = 'left';
-    this._ctx.textBaseline = 'middle';
-    this._ctx.fillText(`${this._volume.name}: ${Math.round(this._volume.value)}`, sliderStart, volumeY - 12);
   }
   
   _isVolumeSlider(x, y) {
@@ -712,7 +705,7 @@ window.customCards.push({
 });
 
 console.info(
-  '%c DSP-CONTROLLER-CARD %c v2.0.1 ',
+  '%c DSP-CONTROLLER-CARD %c v2.0.2 ',
   'color: white; background: #22ba00; font-weight: 700;',
   'color: #22ba00; background: white; font-weight: 700;'
 );
