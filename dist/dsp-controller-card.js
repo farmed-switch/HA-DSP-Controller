@@ -15,13 +15,12 @@ class DspControllerCard extends HTMLElement {
       throw new Error('You must define entities as an array');
     }
 
-    // Calculate height - add extra space if volume slider is enabled
+    // Calculate height - no extra space needed since slider is at top
     const baseHeight = config.height || 300;
-    const volumeHeight = config.volume_entity ? 80 : 0;  // Extra space for volume slider
     
     this._config = {
       title: config.title || 'Equalizer',
-      height: baseHeight + volumeHeight,
+      height: baseHeight,
       min: config.min || -12,
       max: config.max || 12,
       freq_min: config.freq_min || 20,        // Min frequency in Hz
@@ -413,6 +412,11 @@ class DspControllerCard extends HTMLElement {
     this._ctx.fillStyle = this._config.background_color;
     this._ctx.fillRect(0, 0, w, h);
 
+    // Draw volume slider at top if configured (before grid)
+    if (this._volume) {
+      this._drawVolume(w, h);
+    }
+
     // Draw grid
     this._drawGrid(w, h);
 
@@ -424,11 +428,6 @@ class DspControllerCard extends HTMLElement {
 
     // Draw labels
     this._drawLabels(w, h);
-    
-    // Draw volume slider if configured
-    if (this._volume) {
-      this._drawVolume(w, h);
-    }
   }
 
   _drawGrid(w, h) {
@@ -572,7 +571,7 @@ class DspControllerCard extends HTMLElement {
 
   _drawVolume(w, h) {
     const pad = this._config.padding;
-    const volumeY = h - pad + 30; // Position below frequency labels (within canvas)
+    const volumeY = pad - 15; // Position at top, above grid
     const sliderStart = pad;
     const sliderEnd = w - pad;
     const sliderWidth = sliderEnd - sliderStart;
@@ -606,12 +605,19 @@ class DspControllerCard extends HTMLElement {
     this._ctx.arc(valueX, volumeY, 6, 0, Math.PI * 2);
     this._ctx.fill();
     this._ctx.shadowBlur = 0;
+    
+    // Draw value text at top
+    this._ctx.fillStyle = this._config.text_color;
+    this._ctx.font = '10px sans-serif';
+    this._ctx.textAlign = 'left';
+    this._ctx.textBaseline = 'middle';
+    this._ctx.fillText(`${this._volume.name}: ${Math.round(this._volume.value)}`, sliderStart, volumeY - 12);
   }
   
   _isVolumeSlider(x, y) {
     const rect = this._canvas.getBoundingClientRect();
     const pad = this._config.padding;
-    const volumeY = rect.height - pad + 30;  // Match _drawVolume position
+    const volumeY = pad - 15;  // Match _drawVolume position at top
     return y >= volumeY - 10 && y <= volumeY + 10 && x >= pad && x <= rect.width - pad;
   }
   
@@ -662,11 +668,7 @@ class DspControllerCard extends HTMLElement {
   }
 
   getCardSize() {
-    // Return card height in units of 50px
-    // Add 2 units if volume slider is present
-    const baseSize = 3;
-    const volumeSize = this._config?.volume_entity ? 2 : 0;
-    return baseSize + volumeSize;
+    return 3;
   }
 
   static getConfigForm() {
@@ -713,7 +715,7 @@ window.customCards.push({
 });
 
 console.info(
-  '%c DSP-CONTROLLER-CARD %c v2.0.4 ',
+  '%c DSP-CONTROLLER-CARD %c v2.1.0 ',
   'color: white; background: #22ba00; font-weight: 700;',
   'color: #22ba00; background: white; font-weight: 700;'
 );
