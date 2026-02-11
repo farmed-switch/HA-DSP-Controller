@@ -17,7 +17,7 @@ So here it is: a custom Lovelace card that gives you smooth, touch-friendly EQ c
 ## Features
 
 - 🎚️ **Interactive Curve** - Drag control points directly on the frequency response curve
-- 🔊 **Master Volume Slider** - Optional horizontal volume control at the bottom (NEW in v2.0!)
+- 🔊 **Master Volume Slider** - Optional horizontal volume control with custom labels
 - 🎛️ **Visual GUI Editor** - Configure entities with point-and-click interface (no YAML needed!)
 - 📊 **Automatic Frequency Scaling** - Adapts to your actual frequency range (supports 20Hz-160kHz and beyond)
 - 📈 **Logarithmic Scale** - Natural EQ visualization like professional audio software
@@ -113,6 +113,7 @@ min: -12                         # Minimum dB value (default: -12)
 max: 12                          # Maximum dB value (default: 12)
 show_reset: true                 # Show reset button (default: false, enable if needed)
 volume_entity: number.master_volume  # Optional master volume control
+volume_name: Master Volume       # Custom label for volume slider (optional)
 curve_color: '#22ba00'           # Curve line color
 background_color: '#1c1c1c'      # Card background color
 grid_color: '#333333'            # Grid line color
@@ -140,6 +141,7 @@ entities:
 | `padding` | number | `40` | Padding inside grid borders |
 | `show_reset` | boolean | `false` | Show/hide the reset button (hidden by default for safety) |
 | `volume_entity` | string | none | Optional master volume control entity (number, input_number, or media_player) |
+| `volume_name` | string | entity name | Custom display name for volume slider (optional) |
 | `curve_color` | string | `"#22ba00"` | Color of the EQ curve |
 | `background_color` | string | `"#1c1c1c"` | Card background color |
 | `grid_color` | string | `"#333333"` | Grid lines color |

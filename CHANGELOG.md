@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.1] - 2026-02-11
+
+### Added
+- **Custom Volume Label**: New `volume_name` config option to set custom display name for volume slider
+- Allows replacing entity name (e.g., "var") with user-friendly labels (e.g., "Vardagsrum", "Master Volume")
+- Optional parameter - fallbacks to entity's friendly_name if not provided
+
+### Usage Example
+```yaml
+type: custom:dsp-controller-card
+volume_entity: media_player.snapcast_client
+volume_name: Vardagsrum  # Custom label instead of entity name
+```
+
 ## [2.1.0] - 2026-02-11
 
 ### Changed - Major Layout Update

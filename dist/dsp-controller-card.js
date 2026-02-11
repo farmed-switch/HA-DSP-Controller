@@ -33,6 +33,7 @@ class DspControllerCard extends HTMLElement {
       show_reset: config.show_reset === true,
       padding: config.padding || 40,           // Padding for curve inside grid
       volume_entity: config.volume_entity || null,  // Optional master volume control
+      volume_name: config.volume_name || null,      // Optional custom name for volume slider
       ...config
     };
 
@@ -139,7 +140,7 @@ class DspControllerCard extends HTMLElement {
             value: volumeLevel * 100, // Convert to 0-100 for display
             min: 0,
             max: 100,
-            name: volumeState.attributes.friendly_name || 'Volume',
+            name: this._config.volume_name || volumeState.attributes.friendly_name || 'Volume',
             isMediaPlayer: true
           };
         } else {
@@ -149,7 +150,7 @@ class DspControllerCard extends HTMLElement {
             value: parseFloat(volumeState.state) || 0,
             min: parseFloat(volumeState.attributes.min) || 0,
             max: parseFloat(volumeState.attributes.max) || 100,
-            name: volumeState.attributes.friendly_name || 'Volume',
+            name: this._config.volume_name || volumeState.attributes.friendly_name || 'Volume',
             isMediaPlayer: false
           };
         }
@@ -679,6 +680,7 @@ class DspControllerCard extends HTMLElement {
         { name: 'show_reset', selector: { boolean: {} } },
         { name: 'entities', selector: { entity: { multiple: true, filter: { domain: 'number' } } } },
         { name: 'volume_entity', selector: { entity: { domain: ['number', 'input_number', 'media_player'] } } },
+        { name: 'volume_name', selector: { text: {} } },
         { 
           type: 'grid',
           name: '',
@@ -715,7 +717,7 @@ window.customCards.push({
 });
 
 console.info(
-  '%c DSP-CONTROLLER-CARD %c v2.1.0 ',
+  '%c DSP-CONTROLLER-CARD %c v2.1.1 ',
   'color: white; background: #22ba00; font-weight: 700;',
   'color: #22ba00; background: white; font-weight: 700;'
 );
