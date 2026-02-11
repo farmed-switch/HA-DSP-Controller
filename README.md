@@ -139,7 +139,7 @@ entities:
 | `freq_max` | number | auto | Maximum frequency in Hz (auto-detected from entities if not set) |
 | `padding` | number | `40` | Padding inside grid borders |
 | `show_reset` | boolean | `false` | Show/hide the reset button (hidden by default for safety) |
-| `volume_entity` | string | none | Optional master volume control entity (number or input_number) |
+| `volume_entity` | string | none | Optional master volume control entity (number, input_number, or media_player) |
 | `curve_color` | string | `"#22ba00"` | Color of the EQ curve |
 | `background_color` | string | `"#1c1c1c"` | Card background color |
 | `grid_color` | string | `"#333333"` | Grid lines color |

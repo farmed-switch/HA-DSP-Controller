@@ -126,13 +126,30 @@ class DspControllerCard extends HTMLElement {
     if (this._config.volume_entity) {
       const volumeState = this._hass.states[this._config.volume_entity];
       if (volumeState) {
-        this._volume = {
-          entityId: this._config.volume_entity,
-          value: parseFloat(volumeState.state) || 0,
-          min: parseFloat(volumeState.attributes.min) || 0,
-          max: parseFloat(volumeState.attributes.max) || 100,
-          name: volumeState.attributes.friendly_name || 'Volume'
-        };
+        const domain = this._config.volume_entity.split('.')[0];
+        
+        if (domain === 'media_player') {
+          // Media player uses volume_level attribute (0.0-1.0)
+          const volumeLevel = parseFloat(volumeState.attributes.volume_level);
+          this._volume = {
+            entityId: this._config.volume_entity,
+            value: volumeLevel * 100, // Convert to 0-100 for display
+            min: 0,
+            max: 100,
+            name: volumeState.attributes.friendly_name || 'Volume',
+            isMediaPlayer: true
+          };
+        } else {
+          // Number entity uses state
+          this._volume = {
+            entityId: this._config.volume_entity,
+            value: parseFloat(volumeState.state) || 0,
+            min: parseFloat(volumeState.attributes.min) || 0,
+            max: parseFloat(volumeState.attributes.max) || 100,
+            name: volumeState.attributes.friendly_name || 'Volume',
+            isMediaPlayer: false
+          };
+        }
       }
     } else {
       this._volume = null;
@@ -535,7 +552,7 @@ class DspControllerCard extends HTMLElement {
         this._ctx.save();
         
         // Move to position and rotate
-        this._ctx.translate(x, h - pad + 5);
+        this._ctx.translate(x, h - pad + 20);
         this._ctx.rotate(-Math.PI / 4); // Rotate -45 degrees
         
         // Draw text (rotated)
@@ -551,7 +568,7 @@ class DspControllerCard extends HTMLElement {
 
   _drawVolume(w, h) {
     const pad = this._config.padding;
-    const volumeY = h - 15; // Position near bottom
+    const volumeY = h - pad + 50; // Position below frequency labels
     const sliderStart = pad;
     const sliderEnd = w - pad;
     const sliderWidth = sliderEnd - sliderStart;
@@ -596,8 +613,8 @@ class DspControllerCard extends HTMLElement {
   
   _isVolumeSlider(x, y) {
     const rect = this._canvas.getBoundingClientRect();
-    const volumeY = rect.height - 15;
     const pad = this._config.padding;
+    const volumeY = rect.height - pad + 50;
     return y >= volumeY - 10 && y <= volumeY + 10 && x >= pad && x <= rect.width - pad;
   }
   
@@ -618,10 +635,19 @@ class DspControllerCard extends HTMLElement {
       this._volume.value = roundedValue;
       this._draw();
       
-      this._hass.callService('number', 'set_value', {
-        entity_id: this._volume.entityId,
-        value: roundedValue
-      });
+      if (this._volume.isMediaPlayer) {
+        // Media player needs volume_set with volume_level (0.0-1.0)
+        this._hass.callService('media_player', 'volume_set', {
+          entity_id: this._volume.entityId,
+          volume_level: roundedValue / 100
+        });
+      } else {
+        // Number entity uses set_value
+        this._hass.callService('number', 'set_value', {
+          entity_id: this._volume.entityId,
+          value: roundedValue
+        });
+      }
     }
   }
 
@@ -649,7 +675,7 @@ class DspControllerCard extends HTMLElement {
         { name: 'height', selector: { number: { min: 100, max: 1000, mode: 'box' } } },
         { name: 'show_reset', selector: { boolean: {} } },
         { name: 'entities', selector: { entity: { multiple: true, filter: { domain: 'number' } } } },
-        { name: 'volume_entity', selector: { entity: { domain: ['number', 'input_number'] } } },
+        { name: 'volume_entity', selector: { entity: { domain: ['number', 'input_number', 'media_player'] } } },
         { 
           type: 'grid',
           name: '',
@@ -686,7 +712,7 @@ window.customCards.push({
 });
 
 console.info(
-  '%c DSP-CONTROLLER-CARD %c v2.0.0 ',
+  '%c DSP-CONTROLLER-CARD %c v2.0.1 ',
   'color: white; background: #22ba00; font-weight: 700;',
   'color: #22ba00; background: white; font-weight: 700;'
 );

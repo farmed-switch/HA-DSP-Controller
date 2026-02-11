@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.1] - 2026-02-11
+
+### Added
+- **Media Player Support**: Volume control now works with `media_player` entities (e.g., Snapcast clients)
+  - Automatically detects entity domain and uses correct service calls
+  - Media player volume (0.0-1.0) is converted to 0-100 for display
+  - Uses `media_player.volume_set` service for media players
+  - Uses `number.set_value` service for number entities
+
+### Fixed
+- Volume entity picker now shows `media_player`, `number`, and `input_number` entities
+- Proper handling of media_player `volume_level` attribute vs number entity `state`
+- Volume slider positioning moved down to prevent overlap with rotated frequency labels
+- Frequency labels moved down slightly for better spacing
+
 ## [2.0.0] - 2026-02-11
 
 ### Added - Major Release 🎉
