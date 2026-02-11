@@ -8,6 +8,8 @@ class DspControllerCard extends HTMLElement {
     this._volume = null;
     this._canvas = null;
     this._ctx = null;
+    this._effectiveFreqMin = 20;     // Will be updated from actual bands
+    this._effectiveFreqMax = 20000;  // Will be updated from actual bands
   }
 
   setConfig(config) {
@@ -23,8 +25,8 @@ class DspControllerCard extends HTMLElement {
       height: baseHeight,
       min: config.min || -12,
       max: config.max || 12,
-      freq_min: config.freq_min || 20,        // Min frequency in Hz
-      freq_max: config.freq_max || 20000,     // Max frequency in Hz
+      freq_min: config.freq_min || null,        // Min frequency in Hz (auto-detect if null)
+      freq_max: config.freq_max || null,        // Max frequency in Hz (auto-detect if null)
       curve_color: config.curve_color || '#22ba00',
       background_color: config.background_color || '#1c1c1c',
       grid_color: config.grid_color || '#333333',
@@ -717,7 +719,7 @@ window.customCards.push({
 });
 
 console.info(
-  '%c DSP-CONTROLLER-CARD %c v2.1.2 ',
+  '%c DSP-CONTROLLER-CARD %c v2.1.3 ',
   'color: white; background: #22ba00; font-weight: 700;',
   'color: #22ba00; background: white; font-weight: 700;'
 );

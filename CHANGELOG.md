@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.3] - 2026-02-11
+
+### Fixed
+- **Automatic Frequency Range Detection**: Fixed X-axis scaling to match actual band frequencies
+- Removed hardcoded 20Hz-20kHz defaults that prevented proper auto-scaling
+- Frequency labels now properly distributed across actual range (e.g., 40Hz-5kHz)
+- Prevents label overlap when using narrow frequency ranges
+- Config `freq_min` and `freq_max` now default to null (auto-detect) instead of 20/20000
+
+### Technical Details
+- Labels now scale based on `_effectiveFreqMin` and `_effectiveFreqMax` from actual entity data
+- Falls back to 20Hz-20kHz only if no entities loaded yet
+
 ## [2.1.2] - 2026-02-11
 
 ### Fixed
