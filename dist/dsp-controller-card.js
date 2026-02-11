@@ -4,6 +4,8 @@ class DspControllerCard extends HTMLElement {
     this.attachShadow({ mode: 'open' });
     this._bands = [];
     this._draggingIndex = null;
+    this._draggingVolume = false;
+    this._volume = null;
     this._canvas = null;
     this._ctx = null;
   }
@@ -27,6 +29,7 @@ class DspControllerCard extends HTMLElement {
       text_color: config.text_color || '#aaaaaa',
       show_reset: config.show_reset === true,
       padding: config.padding || 40,           // Padding for curve inside grid
+      volume_entity: config.volume_entity || null,  // Optional master volume control
       ...config
     };
 
@@ -117,6 +120,22 @@ class DspControllerCard extends HTMLElement {
       this._effectiveFreqMax = this._config.freq_max || this._actualFreqMax;
       
       console.log(`DSP Controller Card: Loaded ${this._bands.length} bands (${this._actualFreqMin}Hz - ${this._actualFreqMax}Hz)`);
+    }
+    
+    // Update volume if configured
+    if (this._config.volume_entity) {
+      const volumeState = this._hass.states[this._config.volume_entity];
+      if (volumeState) {
+        this._volume = {
+          entityId: this._config.volume_entity,
+          value: parseFloat(volumeState.state) || 0,
+          min: parseFloat(volumeState.attributes.min) || 0,
+          max: parseFloat(volumeState.attributes.max) || 100,
+          name: volumeState.attributes.friendly_name || 'Volume'
+        };
+      }
+    } else {
+      this._volume = null;
     }
   }
 
@@ -231,6 +250,14 @@ class DspControllerCard extends HTMLElement {
   _onPointerDown(e) {
     e.preventDefault();
     const pos = this._getPointerPosition(e);
+    
+    // Check if clicking on volume slider
+    if (this._volume && this._isVolumeSlider(pos.x, pos.y)) {
+      this._draggingVolume = true;
+      this._updateVolumeValue(pos.x);
+      return;
+    }
+    
     const clickedIndex = this._findNearestBand(pos.x, pos.y);
     
     if (clickedIndex !== -1) {
@@ -240,7 +267,11 @@ class DspControllerCard extends HTMLElement {
   }
 
   _onPointerMove(e) {
-    if (this._draggingIndex !== null) {
+    if (this._draggingVolume) {
+      e.preventDefault();
+      const pos = this._getPointerPosition(e);
+      this._updateVolumeValue(pos.x);
+    } else if (this._draggingIndex !== null) {
       e.preventDefault();
       const pos = this._getPointerPosition(e);
       this._updateBandValue(this._draggingIndex, pos.y);
@@ -249,6 +280,7 @@ class DspControllerCard extends HTMLElement {
 
   _onPointerUp(e) {
     this._draggingIndex = null;
+    this._draggingVolume = false;
   }
 
   _getPointerPosition(e) {
@@ -371,6 +403,11 @@ class DspControllerCard extends HTMLElement {
 
     // Draw labels
     this._drawLabels(w, h);
+    
+    // Draw volume slider if configured
+    if (this._volume) {
+      this._drawVolume(w, h);
+    }
   }
 
   _drawGrid(w, h) {
@@ -512,6 +549,82 @@ class DspControllerCard extends HTMLElement {
     });
   }
 
+  _drawVolume(w, h) {
+    const pad = this._config.padding;
+    const volumeY = h - 15; // Position near bottom
+    const sliderStart = pad;
+    const sliderEnd = w - pad;
+    const sliderWidth = sliderEnd - sliderStart;
+    
+    // Calculate value position
+    const range = this._volume.max - this._volume.min;
+    const normalized = (this._volume.value - this._volume.min) / range;
+    const valueX = sliderStart + normalized * sliderWidth;
+    
+    // Draw slider track
+    this._ctx.strokeStyle = this._config.grid_color;
+    this._ctx.lineWidth = 2;
+    this._ctx.beginPath();
+    this._ctx.moveTo(sliderStart, volumeY);
+    this._ctx.lineTo(sliderEnd, volumeY);
+    this._ctx.stroke();
+    
+    // Draw filled portion
+    this._ctx.strokeStyle = this._config.curve_color;
+    this._ctx.lineWidth = 3;
+    this._ctx.beginPath();
+    this._ctx.moveTo(sliderStart, volumeY);
+    this._ctx.lineTo(valueX, volumeY);
+    this._ctx.stroke();
+    
+    // Draw slider handle
+    this._ctx.fillStyle = this._config.curve_color;
+    this._ctx.shadowColor = this._config.curve_color;
+    this._ctx.shadowBlur = 8;
+    this._ctx.beginPath();
+    this._ctx.arc(valueX, volumeY, 6, 0, Math.PI * 2);
+    this._ctx.fill();
+    this._ctx.shadowBlur = 0;
+    
+    // Draw value text
+    this._ctx.fillStyle = this._config.text_color;
+    this._ctx.font = '10px sans-serif';
+    this._ctx.textAlign = 'left';
+    this._ctx.textBaseline = 'middle';
+    this._ctx.fillText(`${this._volume.name}: ${Math.round(this._volume.value)}`, sliderStart, volumeY - 12);
+  }
+  
+  _isVolumeSlider(x, y) {
+    const rect = this._canvas.getBoundingClientRect();
+    const volumeY = rect.height - 15;
+    const pad = this._config.padding;
+    return y >= volumeY - 10 && y <= volumeY + 10 && x >= pad && x <= rect.width - pad;
+  }
+  
+  _updateVolumeValue(x) {
+    const rect = this._canvas.getBoundingClientRect();
+    const pad = this._config.padding;
+    const sliderStart = pad;
+    const sliderEnd = rect.width - pad;
+    const sliderWidth = sliderEnd - sliderStart;
+    
+    const clampedX = Math.max(sliderStart, Math.min(sliderEnd, x));
+    const normalized = (clampedX - sliderStart) / sliderWidth;
+    const range = this._volume.max - this._volume.min;
+    const newValue = this._volume.min + normalized * range;
+    const roundedValue = Math.round(newValue);
+    
+    if (roundedValue !== Math.round(this._volume.value)) {
+      this._volume.value = roundedValue;
+      this._draw();
+      
+      this._hass.callService('number', 'set_value', {
+        entity_id: this._volume.entityId,
+        value: roundedValue
+      });
+    }
+  }
+
   _resetAll() {
     if (!confirm('Reset all EQ bands to 0 dB?\n\nThis will change all frequency values.')) {
       return;
@@ -536,6 +649,7 @@ class DspControllerCard extends HTMLElement {
         { name: 'height', selector: { number: { min: 100, max: 1000, mode: 'box' } } },
         { name: 'show_reset', selector: { boolean: {} } },
         { name: 'entities', selector: { entity: { multiple: true, filter: { domain: 'number' } } } },
+        { name: 'volume_entity', selector: { entity: { domain: ['number', 'input_number'] } } },
         { 
           type: 'grid',
           name: '',
@@ -572,7 +686,7 @@ window.customCards.push({
 });
 
 console.info(
-  '%c DSP-CONTROLLER-CARD %c v1.0.6 ',
+  '%c DSP-CONTROLLER-CARD %c v2.0.0 ',
   'color: white; background: #22ba00; font-weight: 700;',
   'color: #22ba00; background: white; font-weight: 700;'
 );

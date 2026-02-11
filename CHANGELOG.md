@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-02-11
+
+### Added - Major Release 🎉
+- **Optional Master Volume Slider**: Horizontal volume control at the bottom of the card
+  - Fully optional via `volume_entity` configuration parameter
+  - Same color scheme as EQ curve (green gradient fill)
+  - Smooth drag handle with glow effect
+  - Real-time value display with entity name
+  - Supports both `number` and `input_number` entities
+  - Touch and mouse support with 10px tolerance for easy interaction
+  - Integrates seamlessly with existing EQ design
+
+### Changed
+- Volume slider appears automatically when `volume_entity` is configured in editor
+- Configuration editor now includes volume entity picker
+- Enhanced pointer event handling to support both EQ and volume dragging
+
+### Why 2.0?
+This release adds a major new optional feature (master volume control) that significantly expands the card's functionality beyond pure EQ visualization, making it a complete audio control interface.
+
 ## [1.0.6] - 2026-02-11
 
 ### Fixed
