@@ -39,10 +39,26 @@ class DspControllerCard extends HTMLElement {
     }
   }
 
+  connectedCallback() {
+    // Ensure re-render when added to DOM
+    if (this._hass && this._canvas) {
+      this._updateBands();
+      this._draw();
+    }
+  }
+
   _updateBands() {
+    if (!this._hass) {
+      console.warn('DSP Controller Card: hass not available yet');
+      return;
+    }
+    
     this._bands = this._entities.map(entityId => {
       const state = this._hass.states[entityId];
-      if (!state) return null;
+      if (!state) {
+        console.warn(`DSP Controller Card: Entity not found: ${entityId}`);
+        return null;
+      }
       
       return {
         entityId: entityId,
@@ -52,6 +68,8 @@ class DspControllerCard extends HTMLElement {
         name: this._getFrequencyLabel(state.attributes.friendly_name || entityId)
       };
     }).filter(b => b !== null);
+    
+    console.log(`DSP Controller Card: Found ${this._bands.length} bands`, this._bands);
   }
 
   _getFrequencyLabel(name) {
@@ -242,7 +260,21 @@ class DspControllerCard extends HTMLElement {
   }
 
   _draw() {
-    if (!this._ctx || !this._bands.length) return;
+    if (!this._ctx || !this._bands.length) {
+      if (this._ctx) {
+        // Show error message
+        const rect = this._canvas.getBoundingClientRect();
+        this._ctx.fillStyle = this._config.background_color;
+        this._ctx.fillRect(0, 0, rect.width, rect.height);
+        this._ctx.fillStyle = this._config.text_color;
+        this._ctx.font = '14px sans-serif';
+        this._ctx.textAlign = 'center';
+        this._ctx.fillText('No valid entities found', rect.width / 2, rect.height / 2);
+        this._ctx.font = '12px sans-serif';
+        this._ctx.fillText('Check console for details (F12)', rect.width / 2, rect.height / 2 + 20);
+      }
+      return;
+    }
 
     const rect = this._canvas.getBoundingClientRect();
     const w = rect.width;
@@ -407,7 +439,7 @@ window.customCards.push({
 });
 
 console.info(
-  '%c DSP-CONTROLLER-CARD %c v1.0.0 ',
+  '%c DSP-CONTROLLER-CARD %c v1.0.1 ',
   'color: white; background: #22ba00; font-weight: 700;',
   'color: #22ba00; background: white; font-weight: 700;'
 );
