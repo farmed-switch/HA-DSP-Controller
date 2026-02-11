@@ -572,7 +572,7 @@ class DspControllerCard extends HTMLElement {
 
   _drawVolume(w, h) {
     const pad = this._config.padding;
-    const volumeY = h - pad + 50; // Position below frequency labels
+    const volumeY = h - pad + 30; // Position below frequency labels (within canvas)
     const sliderStart = pad;
     const sliderEnd = w - pad;
     const sliderWidth = sliderEnd - sliderStart;
@@ -611,7 +611,7 @@ class DspControllerCard extends HTMLElement {
   _isVolumeSlider(x, y) {
     const rect = this._canvas.getBoundingClientRect();
     const pad = this._config.padding;
-    const volumeY = rect.height - pad + 50;
+    const volumeY = rect.height - pad + 30;  // Match _drawVolume position
     return y >= volumeY - 10 && y <= volumeY + 10 && x >= pad && x <= rect.width - pad;
   }
   
