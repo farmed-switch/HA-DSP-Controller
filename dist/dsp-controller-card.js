@@ -713,7 +713,7 @@ window.customCards.push({
 });
 
 console.info(
-  '%c DSP-CONTROLLER-CARD %c v2.0.3 ',
+  '%c DSP-CONTROLLER-CARD %c v2.0.4 ',
   'color: white; background: #22ba00; font-weight: 700;',
   'color: #22ba00; background: white; font-weight: 700;'
 );
