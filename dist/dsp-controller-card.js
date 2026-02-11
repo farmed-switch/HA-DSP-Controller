@@ -18,12 +18,15 @@ class DspControllerCard extends HTMLElement {
       height: config.height || 300,
       min: config.min || -12,
       max: config.max || 12,
+      freq_min: config.freq_min || 20,        // Min frequency in Hz
+      freq_max: config.freq_max || 20000,     // Max frequency in Hz
       curve_color: config.curve_color || '#22ba00',
       background_color: config.background_color || '#1c1c1c',
       grid_color: config.grid_color || '#333333',
       point_color: config.point_color || '#ffffff',
       text_color: config.text_color || '#aaaaaa',
       show_reset: config.show_reset !== false,
+      padding: config.padding || 40,           // Padding for curve inside grid
       ...config
     };
 
@@ -88,18 +91,44 @@ class DspControllerCard extends HTMLElement {
         return null;
       }
       
+      const frequency = this._extractFrequency(state.attributes.friendly_name || entityId);
+      
       return {
         entityId: entityId,
         value: parseFloat(state.state) || 0,
         min: parseFloat(state.attributes.min) || this._config.min,
         max: parseFloat(state.attributes.max) || this._config.max,
+        frequency: frequency,
         name: this._getFrequencyLabel(state.attributes.friendly_name || entityId)
       };
     }).filter(b => b !== null);
     
+    // Sort by frequency
+    this._bands.sort((a, b) => a.frequency - b.frequency);
+    
+    // Auto-calculate frequency range if not specified
     if (this._bands.length > 0) {
-      console.log(`DSP Controller Card: Loaded ${this._bands.length} bands successfully`);
+      const frequencies = this._bands.map(b => b.frequency);
+      this._actualFreqMin = Math.min(...frequencies);
+      this._actualFreqMax = Math.max(...frequencies);
+      
+      // Use config values if provided, otherwise use actual min/max
+      this._effectiveFreqMin = this._config.freq_min || this._actualFreqMin;
+      this._effectiveFreqMax = this._config.freq_max || this._actualFreqMax;
+      
+      console.log(`DSP Controller Card: Loaded ${this._bands.length} bands (${this._actualFreqMin}Hz - ${this._actualFreqMax}Hz)`);
     }
+  }
+
+  _extractFrequency(name) {
+    // Extract frequency from entity name and convert to Hz
+    const match = name.match(/(\d+(?:\.\d+)?)\s*(hz|khz)/i);
+    if (match) {
+      const num = parseFloat(match[1]);
+      const unit = match[2].toLowerCase();
+      return unit === 'khz' ? num * 1000 : num;
+    }
+    return 1000; // Default to 1kHz if can't parse
   }
 
   _getFrequencyLabel(name) {
@@ -236,13 +265,14 @@ class DspControllerCard extends HTMLElement {
   _findNearestBand(x, y) {
     const rect = this._canvas.getBoundingClientRect();
     const threshold = 30; // pixels
+    const pad = this._config.padding;
     
     let nearestIndex = -1;
     let nearestDist = threshold;
 
     this._bands.forEach((band, i) => {
-      const bandX = (i / (this._bands.length - 1)) * rect.width;
-      const bandY = this._valueToY(band.value);
+      const bandX = this._freqToX(band.frequency, rect.width);
+      const bandY = this._valueToY(band.value, rect.height);
       const dist = Math.sqrt((x - bandX) ** 2 + (y - bandY) ** 2);
       
       if (dist < nearestDist) {
@@ -254,11 +284,30 @@ class DspControllerCard extends HTMLElement {
     return nearestIndex;
   }
 
+  _freqToX(freq, width) {
+    const pad = this._config.padding;
+    const logMin = Math.log10(this._effectiveFreqMin || 20);
+    const logMax = Math.log10(this._effectiveFreqMax || 20000);
+    const logFreq = Math.log10(freq);
+    const normalized = (logFreq - logMin) / (logMax - logMin);
+    return pad + normalized * (width - 2 * pad);
+  }
+
+  _xToFreq(x, width) {
+    const pad = this._config.padding;
+    const logMin = Math.log10(this._effectiveFreqMin || 20);
+    const logMax = Math.log10(this._effectiveFreqMax || 20000);
+    const normalized = (x - pad) / (width - 2 * pad);
+    const logFreq = logMin + normalized * (logMax - logMin);
+    return Math.pow(10, logFreq);
+  }
+
   _updateBandValue(index, y) {
     const band = this._bands[index];
     if (!band) return;
 
-    const newValue = this._yToValue(y);
+    const rect = this._canvas.getBoundingClientRect();
+    const newValue = this._yToValue(y, rect.height);
     const clampedValue = Math.max(band.min, Math.min(band.max, newValue));
     
     // Update local state immediately for smooth UI
@@ -272,17 +321,17 @@ class DspControllerCard extends HTMLElement {
     });
   }
 
-  _valueToY(value) {
-    const rect = this._canvas.getBoundingClientRect();
+  _valueToY(value, height) {
+    const pad = this._config.padding;
     const range = this._config.max - this._config.min;
     const normalized = (this._config.max - value) / range;
-    return normalized * rect.height;
+    return pad + normalized * (height - 2 * pad);
   }
 
-  _yToValue(y) {
-    const rect = this._canvas.getBoundingClientRect();
+  _yToValue(y, height) {
+    const pad = this._config.padding;
     const range = this._config.max - this._config.min;
-    const normalized = y / rect.height;
+    const normalized = (y - pad) / (height - 2 * pad);
     return this._config.max - (normalized * range);
   }
 
@@ -325,33 +374,40 @@ class DspControllerCard extends HTMLElement {
   }
 
   _drawGrid(w, h) {
+    const pad = this._config.padding;
     this._ctx.strokeStyle = this._config.grid_color;
     this._ctx.lineWidth = 1;
+
+    // Draw border rectangle
+    this._ctx.strokeRect(pad, pad, w - 2 * pad, h - 2 * pad);
 
     // Horizontal lines (dB levels)
     const dbSteps = [-12, -9, -6, -3, 0, 3, 6, 9, 12];
     dbSteps.forEach(db => {
       if (db >= this._config.min && db <= this._config.max) {
-        const y = this._valueToY(db);
+        const y = this._valueToY(db, h);
         this._ctx.beginPath();
-        this._ctx.moveTo(0, y);
-        this._ctx.lineTo(w, y);
+        this._ctx.moveTo(pad, y);
+        this._ctx.lineTo(w - pad, y);
         this._ctx.stroke();
 
-        // Label
+        // dB Label on left
         this._ctx.fillStyle = this._config.text_color;
         this._ctx.font = '10px sans-serif';
-        this._ctx.fillText(`${db > 0 ? '+' : ''}${db}`, 5, y - 2);
+        this._ctx.textAlign = 'right';
+        this._ctx.fillText(`${db > 0 ? '+' : ''}${db}`, pad - 5, y + 3);
       }
     });
 
-    // Vertical lines (frequencies)
-    this._bands.forEach((band, i) => {
-      const x = (i / (this._bands.length - 1)) * w;
+    // Vertical lines at actual band frequencies
+    this._bands.forEach(band => {
+      const x = this._freqToX(band.frequency, w);
       this._ctx.beginPath();
-      this._ctx.moveTo(x, 0);
-      this._ctx.lineTo(x, h);
+      this._ctx.setLineDash([2, 2]); // Dashed line
+      this._ctx.moveTo(x, pad);
+      this._ctx.lineTo(x, h - pad);
       this._ctx.stroke();
+      this._ctx.setLineDash([]); // Reset to solid
     });
   }
 
@@ -366,9 +422,9 @@ class DspControllerCard extends HTMLElement {
     // Create smooth curve using quadratic interpolation
     this._ctx.beginPath();
     
-    const points = this._bands.map((band, i) => ({
-      x: (i / (this._bands.length - 1)) * w,
-      y: this._valueToY(band.value)
+    const points = this._bands.map(band => ({
+      x: this._freqToX(band.frequency, w),
+      y: this._valueToY(band.value, h)
     }));
 
     this._ctx.moveTo(points[0].x, points[0].y);
@@ -395,9 +451,9 @@ class DspControllerCard extends HTMLElement {
   }
 
   _drawPoints(w, h) {
-    this._bands.forEach((band, i) => {
-      const x = (i / (this._bands.length - 1)) * w;
-      const y = this._valueToY(band.value);
+    this._bands.forEach(band => {
+      const x = this._freqToX(band.frequency, w);
+      const y = this._valueToY(band.value, h);
 
       // Outer circle (glow effect)
       this._ctx.fillStyle = this._config.curve_color + '40';
@@ -419,17 +475,22 @@ class DspControllerCard extends HTMLElement {
   }
 
   _drawLabels(w, h) {
+    const pad = this._config.padding;
     this._ctx.fillStyle = this._config.text_color;
     this._ctx.font = '11px sans-serif';
     this._ctx.textAlign = 'center';
 
-    this._bands.forEach((band, i) => {
-      const x = (i / (this._bands.length - 1)) * w;
-      this._ctx.fillText(band.name, x, h - 5);
+    this._bands.forEach(band => {
+      const x = this._freqToX(band.frequency, w);
+      this._ctx.fillText(band.name, x, h - pad + 15);
     });
   }
 
   _resetAll() {
+    if (!confirm('Reset all EQ bands to 0 dB?\n\nThis will change all frequency values.')) {
+      return;
+    }
+    
     this._bands.forEach(band => {
       this._hass.callService('number', 'set_value', {
         entity_id: band.entityId,
@@ -449,10 +510,210 @@ class DspControllerCard extends HTMLElement {
   static getStubConfig() {
     return {
       title: 'DSP Equalizer',
-      entities: []
+      entities: [],
+      height: 300
     };
   }
 }
+
+// Editor for visual configuration in Lovelace UI
+class DspControllerCardEditor extends HTMLElement {
+  setConfig(config) {
+    this._config = { ...config };
+    if (!this._config.entities) {
+      this._config.entities = [];
+    }
+    this.render();
+  }
+
+  set hass(hass) {
+    this._hass = hass;
+  }
+
+  render() {
+    if (!this.shadowRoot) {
+      this.attachShadow({ mode: 'open' });
+    }
+
+    const style = `
+      <style>
+        .card-config {
+          padding: 16px;
+        }
+        .option {
+          margin-bottom: 16px;
+        }
+        .option label {
+          display: block;
+          margin-bottom: 4px;
+          font-weight: 500;
+        }
+        ha-entity-picker, paper-input {
+          width: 100%;
+        }
+        .entities-list {
+          border: 1px solid var(--divider-color);
+          border-radius: 4px;
+          padding: 8px;
+          margin-top: 8px;
+        }
+        .entity-row {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin-bottom: 8px;
+        }
+        .entity-row ha-entity-picker {
+          flex: 1;
+        }
+        mwc-button {
+          margin-top: 8px;
+        }
+        .remove-btn {
+          color: var(--error-color);
+          cursor: pointer;
+        }
+      </style>
+    `;
+
+    const html = `
+      ${style}
+      <div class="card-config">
+        <div class="option">
+          <label>Title</label>
+          <paper-input
+            value="${this._config.title || 'DSP Equalizer'}"
+            @value-changed="${this._valueChanged}"
+            .configValue="${'title'}"
+          ></paper-input>
+        </div>
+        
+        <div class="option">
+          <label>Height (pixels)</label>
+          <paper-input
+            type="number"
+            value="${this._config.height || 300}"
+            @value-changed="${this._valueChanged}"
+            .configValue="${'height'}"
+          ></paper-input>
+        </div>
+
+        <div class="option">
+          <label>Entities (EQ Bands)</label>
+          <div class="entities-list">
+            ${this._config.entities.map((entity, index) => `
+              <div class="entity-row" data-index="${index}">
+                <ha-entity-picker
+                  allow-custom-entity
+                  .hass="${this._hass}"
+                  .value="${entity}"
+                  .configValue="${index}"
+                  domain-filter="number"
+                  @value-changed="${this._entityChanged}"
+                ></ha-entity-picker>
+                <ha-icon-button
+                  class="remove-btn"
+                  .index="${index}"
+                  @click="${this._removeEntity}"
+                >
+                  <ha-icon icon="mdi:delete"></ha-icon>
+                </ha-icon-button>
+              </div>
+            `).join('')}
+          </div>
+          <mwc-button @click="${this._addEntity}">
+            <ha-icon icon="mdi:plus"></ha-icon>
+            Add Entity
+          </mwc-button>
+        </div>
+
+        <div class="option">
+          <label>Min dB</label>
+          <paper-input
+            type="number"
+            value="${this._config.min || -12}"
+            @value-changed="${this._valueChanged}"
+            .configValue="${'min'}"
+          ></paper-input>
+        </div>
+
+        <div class="option">
+          <label>Max dB</label>
+          <paper-input
+            type="number"
+            value="${this._config.max || 12}"
+            @value-changed="${this._valueChanged}"
+            .configValue="${'max'}"
+          ></paper-input>
+        </div>
+      </div>
+    `;
+
+    this.shadowRoot.innerHTML = html;
+    this._attachEventListeners();
+  }
+
+  _attachEventListeners() {
+    this.shadowRoot.querySelectorAll('paper-input').forEach(input => {
+      input.addEventListener('value-changed', (ev) => {
+        const target = ev.target;
+        const configValue = target.configValue;
+        let value = ev.detail.value;
+        
+        if (target.type === 'number') {
+          value = parseFloat(value);
+        }
+        
+        if (this._config[configValue] !== value) {
+          this._config = { ...this._config, [configValue]: value };
+          this._configChanged();
+        }
+      });
+    });
+
+    this.shadowRoot.querySelectorAll('ha-entity-picker').forEach(picker => {
+      picker.addEventListener('value-changed', (ev) => {
+        const index = parseInt(ev.target.configValue);
+        const entities = [...this._config.entities];
+        entities[index] = ev.detail.value;
+        this._config = { ...this._config, entities };
+        this._configChanged();
+      });
+    });
+
+    const addBtn = this.shadowRoot.querySelector('mwc-button');
+    if (addBtn) {
+      addBtn.addEventListener('click', () => {
+        const entities = [...this._config.entities, ''];
+        this._config = { ...this._config, entities };
+        this._configChanged();
+        this.render();
+      });
+    }
+
+    this.shadowRoot.querySelectorAll('.remove-btn').forEach(btn => {
+      btn.addEventListener('click', (ev) => {
+        const index = parseInt(ev.currentTarget.index);
+        const entities = [...this._config.entities];
+        entities.splice(index, 1);
+        this._config = { ...this._config, entities };
+        this._configChanged();
+        this.render();
+      });
+    });
+  }
+
+  _configChanged() {
+    const event = new Event('config-changed', {
+      bubbles: true,
+      composed: true,
+    });
+    event.detail = { config: this._config };
+    this.dispatchEvent(event);
+  }
+}
+
+customElements.define('dsp-controller-card-editor', DspControllerCardEditor);
 
 customElements.define('dsp-controller-card', DspControllerCard);
 
@@ -466,7 +727,7 @@ window.customCards.push({
 });
 
 console.info(
-  '%c DSP-CONTROLLER-CARD %c v1.0.2 ',
+  '%c DSP-CONTROLLER-CARD %c v1.0.3 ',
   'color: white; background: #22ba00; font-weight: 700;',
   'color: #22ba00; background: white; font-weight: 700;'
 );

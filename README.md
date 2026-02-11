@@ -17,12 +17,15 @@ So here it is: a custom Lovelace card that gives you smooth, touch-friendly EQ c
 ## Features
 
 - 🎚️ **Interactive Curve** - Drag control points directly on the frequency response curve
+- 🎛️ **Visual GUI Editor** - Configure entities with point-and-click interface (no YAML needed!)
+- 📊 **Automatic Frequency Scaling** - Adapts to your actual frequency range (supports 20Hz-160kHz and beyond)
+- 📈 **Logarithmic Scale** - Natural EQ visualization like professional audio software
 - 📱 **Mobile Optimized** - Smooth touch controls work perfectly on phones and tablets
 - 🎨 **Fully Customizable** - Configure colors, dimensions, dB range, and more
 - ⚡ **Real-time Updates** - Changes are instantly applied to your Home Assistant entities
-- 🔄 **Quick Reset** - One-click button to flatten all EQ bands to 0 dB
+- 🔄 **Safe Reset** - Confirmation dialog prevents accidental EQ flattening
 - 🌓 **Theme Presets** - Dark, light, and custom color schemes included
-- 📊 **Visual Grid** - Clear dB and frequency markers for precise adjustments
+- 📊 **Visual Grid** - Clear dB and frequency markers with proper spacing
 - 🎯 **Smooth Interpolation** - Bezier curves show a realistic frequency response
 
 Perfect for controlling:
@@ -59,7 +62,15 @@ Perfect for controlling:
 
 ## Usage
 
-### Basic Configuration
+### Easy Way: Visual Editor (Recommended)
+
+1. Add a new card to your Lovelace dashboard
+2. Search for "**DSP Controller Card**"
+3. Click **"Add Entity"** button to select your EQ band entities
+4. Configure title, height, min/max dB values
+5. Done! No YAML needed!
+
+### Manual Way: YAML Configuration
 
 Add this to your Lovelace dashboard in raw YAML mode:
 
@@ -115,6 +126,9 @@ entities:
 | `height` | number | `300` | Canvas height in pixels |
 | `min` | number | `-12` | Minimum dB value |
 | `max` | number | `12` | Maximum dB value |
+| `freq_min` | number | auto | Minimum frequency in Hz (auto-detected from entities if not set) |
+| `freq_max` | number | auto | Maximum frequency in Hz (auto-detected from entities if not set) |
+| `padding` | number | `40` | Padding inside grid borders |
 | `show_reset` | boolean | `true` | Show/hide the reset button |
 | `curve_color` | string | `"#22ba00"` | Color of the EQ curve |
 | `background_color` | string | `"#1c1c1c"` | Card background color |
