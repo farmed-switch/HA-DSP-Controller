@@ -477,12 +477,38 @@ class DspControllerCard extends HTMLElement {
   _drawLabels(w, h) {
     const pad = this._config.padding;
     this._ctx.fillStyle = this._config.text_color;
-    this._ctx.font = '11px sans-serif';
-    this._ctx.textAlign = 'center';
+    this._ctx.font = '10px sans-serif';
 
-    this._bands.forEach(band => {
-      const x = this._freqToX(band.frequency, w);
-      this._ctx.fillText(band.name, x, h - pad + 15);
+    // Calculate spacing between bands to determine if we need to skip labels
+    const positions = this._bands.map(band => this._freqToX(band.frequency, w));
+    const minSpacing = 30; // Minimum pixels between labels
+    
+    this._bands.forEach((band, index) => {
+      const x = positions[index];
+      
+      // Check if this label would overlap with neighbors
+      let shouldShow = true;
+      if (index > 0 && Math.abs(x - positions[index - 1]) < minSpacing) {
+        // Skip every other label when too close
+        shouldShow = index % 2 === 0;
+      }
+      
+      if (shouldShow) {
+        // Save context
+        this._ctx.save();
+        
+        // Move to position and rotate
+        this._ctx.translate(x, h - pad + 5);
+        this._ctx.rotate(-Math.PI / 4); // Rotate -45 degrees
+        
+        // Draw text (rotated)
+        this._ctx.textAlign = 'right';
+        this._ctx.textBaseline = 'middle';
+        this._ctx.fillText(band.name, 0, 0);
+        
+        // Restore context
+        this._ctx.restore();
+      }
     });
   }
 
@@ -546,7 +572,7 @@ window.customCards.push({
 });
 
 console.info(
-  '%c DSP-CONTROLLER-CARD %c v1.0.5 ',
+  '%c DSP-CONTROLLER-CARD %c v1.0.6 ',
   'color: white; background: #22ba00; font-weight: 700;',
   'color: #22ba00; background: white; font-weight: 700;'
 );

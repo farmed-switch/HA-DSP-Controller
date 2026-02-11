@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.6] - 2026-02-11
+
+### Fixed
+- Frequency labels now rotate -45° to prevent overlap when bands are close together
+- Smart label spacing: automatically skips every other label when spacing < 30px
+- Improved text alignment for rotated labels (professional EQ style)
+
+### Changed
+- Font size reduced to 10px for cleaner appearance with rotation
+- Labels positioned closer to grid edge
+
 ## [1.0.5] - 2026-02-11
 
 ### Fixed
