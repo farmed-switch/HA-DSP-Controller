@@ -54,10 +54,13 @@ class DspControllerCard extends HTMLElement {
     const oldHass = this._hass;
     this._hass = hass;
     
-    // Update switch UI whenever hass updates (lightweight operation)
-    if (this.shadowRoot) {
-      this._updateSwitchUI();
-    }
+    // Update switch UI whenever hass updates using requestAnimationFrame
+    // This ensures DOM is ready and state is current
+    requestAnimationFrame(() => {
+      if (this.shadowRoot) {
+        this._updateSwitchUI();
+      }
+    });
     
     // Only update if entities have actually changed
     if (!oldHass || this._entitiesChanged(oldHass, hass)) {
@@ -82,11 +85,25 @@ class DspControllerCard extends HTMLElement {
   }
 
   _entitiesChanged(oldHass, newHass) {
-    return this._entities.some(entityId => {
+    // Check EQ band entities
+    const bandsChanged = this._entities.some(entityId => {
       const oldState = oldHass.states[entityId];
       const newState = newHass.states[entityId];
       return !oldState || !newState || oldState.state !== newState.state;
     });
+    
+    // Check switch entities (if configured)
+    const checkSwitch = (entityId) => {
+      if (!entityId) return false;
+      const oldState = oldHass.states[entityId];
+      const newState = newHass.states[entityId];
+      return !oldState || !newState || oldState.state !== newState.state;
+    };
+    
+    const switch1Changed = checkSwitch(this._config.switch1_entity);
+    const switch2Changed = checkSwitch(this._config.switch2_entity);
+    
+    return bandsChanged || switch1Changed || switch2Changed;
   }
 
   _resizeCanvas() {
