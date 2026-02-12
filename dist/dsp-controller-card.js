@@ -54,6 +54,11 @@ class DspControllerCard extends HTMLElement {
     const oldHass = this._hass;
     this._hass = hass;
     
+    // Update switch UI whenever hass updates (lightweight operation)
+    if (this.shadowRoot) {
+      this._updateSwitchUI();
+    }
+    
     // Only update if entities have actually changed
     if (!oldHass || this._entitiesChanged(oldHass, hass)) {
       this._updateBands();
