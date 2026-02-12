@@ -10,6 +10,9 @@ class DspControllerCard extends HTMLElement {
     this._ctx = null;
     this._effectiveFreqMin = 20;     // Will be updated from actual bands
     this._effectiveFreqMax = 20000;  // Will be updated from actual bands
+    this._editMode = false;          // Edit mode - default OFF (graph locked)
+    this._switch1 = null;            // Optional switch 1 state
+    this._switch2 = null;            // Optional switch 2 state
   }
 
   setConfig(config) {
@@ -36,6 +39,10 @@ class DspControllerCard extends HTMLElement {
       padding: config.padding || 40,           // Padding for curve inside grid
       volume_entity: config.volume_entity || null,  // Optional master volume control
       volume_name: config.volume_name || null,      // Optional custom name for volume slider
+      switch1_entity: config.switch1_entity || null,  // Optional toggle switch 1
+      switch1_name: config.switch1_name || 'Switch 1',  // Custom name for switch 1
+      switch2_entity: config.switch2_entity || null,  // Optional toggle switch 2
+      switch2_name: config.switch2_name || 'Switch 2',  // Custom name for switch 2
       ...config
     };
 
@@ -160,6 +167,34 @@ class DspControllerCard extends HTMLElement {
     } else {
       this._volume = null;
     }
+    
+    // Update switch 1 if configured
+    if (this._config.switch1_entity) {
+      const switch1State = this._hass.states[this._config.switch1_entity];
+      if (switch1State) {
+        this._switch1 = {
+          entityId: this._config.switch1_entity,
+          name: this._config.switch1_name,
+          state: switch1State.state === 'on'
+        };
+      }
+    } else {
+      this._switch1 = null;
+    }
+    
+    // Update switch 2 if configured
+    if (this._config.switch2_entity) {
+      const switch2State = this._hass.states[this._config.switch2_entity];
+      if (switch2State) {
+        this._switch2 = {
+          entityId: this._config.switch2_entity,
+          name: this._config.switch2_name,
+          state: switch2State.state === 'on'
+        };
+      }
+    } else {
+      this._switch2 = null;
+    }
   }
 
   _extractFrequency(name) {
@@ -228,12 +263,85 @@ class DspControllerCard extends HTMLElement {
         .reset-btn:hover {
           background-color: #444;
         }
+        .controls-bar {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 8px;
+          min-height: 24px;
+        }
+        .volume-label {
+          font-size: 11px;
+          color: ${this._config.text_color};
+        }
+        .switches {
+          display: flex;
+          gap: 12px;
+          align-items: center;
+        }
+        .switch-container {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+        .switch-label {
+          font-size: 11px;
+          color: ${this._config.text_color};
+          white-space: nowrap;
+        }
+        .toggle-switch {
+          position: relative;
+          width: 36px;
+          height: 20px;
+          background-color: #4a4a4a;
+          border-radius: 10px;
+          cursor: pointer;
+          transition: background-color 0.3s;
+        }
+        .toggle-switch.active {
+          background-color: ${this._config.curve_color};
+        }
+        .toggle-switch::after {
+          content: '';
+          position: absolute;
+          width: 16px;
+          height: 16px;
+          border-radius: 50%;
+          background-color: white;
+          top: 2px;
+          left: 2px;
+          transition: left 0.3s;
+        }
+        .toggle-switch.active::after {
+          left: 18px;
+        }
       </style>
     `;
 
     const html = `
       ${style}
       <div class="header">${this._config.title}</div>
+      <div class="controls-bar">
+        <div class="volume-label" id="volumeLabel"></div>
+        <div class="switches">
+          ${this._config.switch1_entity ? `
+            <div class="switch-container">
+              <span class="switch-label">${this._config.switch1_name}</span>
+              <div class="toggle-switch" id="switch1" data-entity="${this._config.switch1_entity}"></div>
+            </div>
+          ` : ''}
+          ${this._config.switch2_entity ? `
+            <div class="switch-container">
+              <span class="switch-label">${this._config.switch2_name}</span>
+              <div class="toggle-switch" id="switch2" data-entity="${this._config.switch2_entity}"></div>
+            </div>
+          ` : ''}
+          <div class="switch-container">
+            <span class="switch-label">Edit</span>
+            <div class="toggle-switch" id="editSwitch"></div>
+          </div>
+        </div>
+      </div>
       <div class="eq-container">
         <canvas id="eqCanvas"></canvas>
       </div>
@@ -263,6 +371,25 @@ class DspControllerCard extends HTMLElement {
     if (resetBtn) {
       resetBtn.addEventListener('click', () => this._resetAll());
     }
+    
+    // Switch event listeners
+    const switch1Elem = this.shadowRoot.getElementById('switch1');
+    if (switch1Elem) {
+      switch1Elem.addEventListener('click', () => this._toggleSwitch(1));
+    }
+    
+    const switch2Elem = this.shadowRoot.getElementById('switch2');
+    if (switch2Elem) {
+      switch2Elem.addEventListener('click', () => this._toggleSwitch(2));
+    }
+    
+    const editSwitchElem = this.shadowRoot.getElementById('editSwitch');
+    if (editSwitchElem) {
+      editSwitchElem.addEventListener('click', () => this._toggleEditMode());
+    }
+    
+    // Update initial UI state
+    this._updateSwitchUI();
 
     if (this._hass) {
       this._updateBands();
@@ -274,10 +401,15 @@ class DspControllerCard extends HTMLElement {
     e.preventDefault();
     const pos = this._getPointerPosition(e);
     
-    // Check if clicking on volume slider
+    // Check volume slider first (works even when Edit mode is OFF)
     if (this._volume && this._isVolumeSlider(pos.x, pos.y)) {
       this._draggingVolume = true;
       this._updateVolumeValue(pos.x);
+      return;
+    }
+    
+    // Block EQ editing if Edit mode is OFF
+    if (!this._editMode) {
       return;
     }
     
@@ -294,7 +426,14 @@ class DspControllerCard extends HTMLElement {
       e.preventDefault();
       const pos = this._getPointerPosition(e);
       this._updateVolumeValue(pos.x);
-    } else if (this._draggingIndex !== null) {
+      return;
+    }
+    
+    if (!this._editMode) {
+      return;
+    }
+    
+    if (this._draggingIndex !== null) {
       e.preventDefault();
       const pos = this._getPointerPosition(e);
       this._updateBandValue(this._draggingIndex, pos.y);
@@ -415,7 +554,10 @@ class DspControllerCard extends HTMLElement {
     this._ctx.fillStyle = this._config.background_color;
     this._ctx.fillRect(0, 0, w, h);
 
-    // Draw volume slider at top if configured (before grid)
+    // Update controls UI
+    this._updateSwitchUI();
+
+    // Draw volume slider
     if (this._volume) {
       this._drawVolume(w, h);
     }
@@ -572,9 +714,22 @@ class DspControllerCard extends HTMLElement {
     });
   }
 
+  _resetAll() {
+    if (!confirm('Reset all EQ bands to 0 dB?\n\nThis will change all frequency values.')) {
+      return;
+    }
+    
+    this._bands.forEach(band => {
+      this._hass.callService('number', 'set_value', {
+        entity_id: band.entityId,
+        value: 0
+      });
+    });
+  }
+
   _drawVolume(w, h) {
     const pad = this._config.padding;
-    const volumeY = 30; // Position at top with space for text (fixed position)
+    const volumeY = 60; // Position below controls-bar
     const sliderStart = pad;
     const sliderEnd = w - pad;
     const sliderWidth = sliderEnd - sliderStart;
@@ -608,18 +763,11 @@ class DspControllerCard extends HTMLElement {
     this._ctx.arc(valueX, volumeY, 6, 0, Math.PI * 2);
     this._ctx.fill();
     this._ctx.shadowBlur = 0;
-    
-    // Draw value text at top
-    this._ctx.fillStyle = this._config.text_color;
-    this._ctx.font = '11px sans-serif';
-    this._ctx.textAlign = 'left';
-    this._ctx.textBaseline = 'middle';
-    this._ctx.fillText(`${this._volume.name}: ${Math.round(this._volume.value)}`, sliderStart, 12);
   }
   
   _isVolumeSlider(x, y) {
     const rect = this._canvas.getBoundingClientRect();
-    const volumeY = 30;  // Match _drawVolume position
+    const volumeY = 60;  // Match _drawVolume position
     const pad = this._config.padding;
     return y >= volumeY - 10 && y <= volumeY + 10 && x >= pad && x <= rect.width - pad;
   }
@@ -656,18 +804,65 @@ class DspControllerCard extends HTMLElement {
       }
     }
   }
-
-  _resetAll() {
-    if (!confirm('Reset all EQ bands to 0 dB?\n\nThis will change all frequency values.')) {
-      return;
+  
+  _updateSwitchUI() {
+    // Update volume label
+    const volumeLabel = this.shadowRoot.getElementById('volumeLabel');
+    if (volumeLabel && this._volume) {
+      volumeLabel.textContent = `${this._volume.name}: ${Math.round(this._volume.value)}`;
     }
     
-    this._bands.forEach(band => {
-      this._hass.callService('number', 'set_value', {
-        entity_id: band.entityId,
-        value: 0
-      });
+    // Update switch 1
+    const switch1Elem = this.shadowRoot.getElementById('switch1');
+    if (switch1Elem && this._switch1) {
+      if (this._switch1.state) {
+        switch1Elem.classList.add('active');
+      } else {
+        switch1Elem.classList.remove('active');
+      }
+    }
+    
+    // Update switch 2
+    const switch2Elem = this.shadowRoot.getElementById('switch2');
+    if (switch2Elem && this._switch2) {
+      if (this._switch2.state) {
+        switch2Elem.classList.add('active');
+      } else {
+        switch2Elem.classList.remove('active');
+      }
+    }
+    
+    // Update edit switch
+    const editSwitchElem = this.shadowRoot.getElementById('editSwitch');
+    if (editSwitchElem) {
+      if (this._editMode) {
+        editSwitchElem.classList.add('active');
+      } else {
+        editSwitchElem.classList.remove('active');
+      }
+    }
+  }
+  
+  _toggleSwitch(switchNum) {
+    if (!this._hass) return;
+    
+    const switchData = switchNum === 1 ? this._switch1 : this._switch2;
+    if (!switchData) return;
+    
+    // Toggle the entity
+    this._hass.callService('homeassistant', 'toggle', {
+      entity_id: switchData.entityId
     });
+  }
+  
+  _toggleEditMode() {
+    this._editMode = !this._editMode;
+    this._updateSwitchUI();
+    
+    // Update cursor style
+    if (this._canvas) {
+      this._canvas.style.cursor = this._editMode ? 'pointer' : 'default';
+    }
   }
 
   getCardSize() {
@@ -683,6 +878,10 @@ class DspControllerCard extends HTMLElement {
         { name: 'entities', selector: { entity: { multiple: true, filter: { domain: 'number' } } } },
         { name: 'volume_entity', selector: { entity: { domain: ['number', 'input_number', 'media_player'] } } },
         { name: 'volume_name', selector: { text: {} } },
+        { name: 'switch1_entity', selector: { entity: { domain: ['switch', 'input_boolean'] } } },
+        { name: 'switch1_name', selector: { text: {} } },
+        { name: 'switch2_entity', selector: { entity: { domain: ['switch', 'input_boolean'] } } },
+        { name: 'switch2_name', selector: { text: {} } },
         { 
           type: 'grid',
           name: '',
