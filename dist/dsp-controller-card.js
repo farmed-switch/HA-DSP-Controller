@@ -729,7 +729,7 @@ class DspControllerCard extends HTMLElement {
 
   _drawVolume(w, h) {
     const pad = this._config.padding;
-    const volumeY = 60; // Position below controls-bar
+    const volumeY = 45; // Position below controls-bar
     const sliderStart = pad;
     const sliderEnd = w - pad;
     const sliderWidth = sliderEnd - sliderStart;
@@ -767,7 +767,7 @@ class DspControllerCard extends HTMLElement {
   
   _isVolumeSlider(x, y) {
     const rect = this._canvas.getBoundingClientRect();
-    const volumeY = 60;  // Match _drawVolume position
+    const volumeY = 45;  // Match _drawVolume position
     const pad = this._config.padding;
     return y >= volumeY - 10 && y <= volumeY + 10 && x >= pad && x <= rect.width - pad;
   }
@@ -812,20 +812,22 @@ class DspControllerCard extends HTMLElement {
       volumeLabel.textContent = `${this._volume.name}: ${Math.round(this._volume.value)}`;
     }
     
-    // Update switch 1
+    // Update switch 1 - read LIVE state from hass
     const switch1Elem = this.shadowRoot.getElementById('switch1');
-    if (switch1Elem && this._switch1) {
-      if (this._switch1.state) {
+    if (switch1Elem && this._switch1 && this._hass) {
+      const switch1State = this._hass.states[this._switch1.entityId];
+      if (switch1State && switch1State.state === 'on') {
         switch1Elem.classList.add('active');
       } else {
         switch1Elem.classList.remove('active');
       }
     }
     
-    // Update switch 2
+    // Update switch 2 - read LIVE state from hass
     const switch2Elem = this.shadowRoot.getElementById('switch2');
-    if (switch2Elem && this._switch2) {
-      if (this._switch2.state) {
+    if (switch2Elem && this._switch2 && this._hass) {
+      const switch2State = this._hass.states[this._switch2.entityId];
+      if (switch2State && switch2State.state === 'on') {
         switch2Elem.classList.add('active');
       } else {
         switch2Elem.classList.remove('active');
